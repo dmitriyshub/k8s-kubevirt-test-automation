@@ -99,7 +99,7 @@ Use the project tree structure for reference
 
 1. Clone this role to the `roles` directory in your project.
 ```shell
-git clone git@gitlab.com:acc/vm-user-stories.git $HOME
+git clone git@github.com:dmitriyshub/k8s-kubevirt-test-auto.git $HOME/$PROJECT
 ```
 2. Create `inventory.ini` and `ansible.cfg` files at the project level
 ```ini
