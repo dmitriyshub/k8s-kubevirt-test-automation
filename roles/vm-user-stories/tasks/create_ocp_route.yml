@@ -1,0 +1,52 @@
+---
+
+  - name: Render the 'ocp_route.j2' template to generate Route definition
+    ansible.builtin.template: 
+      src: "ocp_route.j2" 
+      dest: "files/ocp_route.yaml"
+
+  - name: Deploy the generated Route yaml
+    k8s:
+      state: present
+      src: "files/ocp_route.yaml"
+    register: route_info
+    until: route_info.result.spec.host is defined
+    retries: 12
+    delay: 10
+
+  - name: Validate the HTTPD service accessibility via the Route
+    ansible.builtin.uri:  
+      url: "http://{{ route_info.result.spec.host }}" 
+      method: GET
+      status_code: 200
+      headers:
+        User-Agent: "curl/7.88.1"
+    delegate_to: localhost
+    register: http_info  
+    until: http_info.status == 200  
+    retries: 6
+    delay: 10
+
+  - name: Print HTTP response status
+    ansible.builtin.debug:
+      msg: "HTTP response status from {{ route_info.result.spec.host }}: {{ http_info.status }}"
+
+  - name: Identify primary Route host name in a variable 
+    ansible.builtin.set_fact:
+      host_name: "{{ route_info.result.spec.host }}"
+    when: condition != "clone"
+
+  - name: Output the resolved host of the deployed Route
+    ansible.builtin.debug:
+      var: host_name
+    when: condition != "clone"
+
+  - name: Identify cloned Route host name in a variable
+    ansible.builtin.set_fact:
+      clone_host_name: "{{ route_info.result.spec.host }}"
+    when: condition == "clone"
+
+  - name: Output the resolved host of the deployed Route
+    ansible.builtin.debug:
+      var: clone_host_name
+    when: condition == "clone"

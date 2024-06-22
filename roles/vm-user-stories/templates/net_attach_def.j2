@@ -1,0 +1,13 @@
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  annotations:
+    description: CNV Linux Bridge
+    k8s.v1.cni.cncf.io/resourceName: bridge.network.kubevirt.io/{{ BRIDGE_NAME }}
+  name: {{ PROJECT }}-{{ BRIDGE_NAME }}
+  namespace: {{ PROJECT }}
+  labels:
+    environment: ansible-test-{{ VM_NAME }}
+spec:
+  config: >-
+    {"name":"{{ PROJECT }}-{{ BRIDGE_NAME }}","type":"cnv-bridge","cniVersion":"0.3.1","bridge":"{{ BRIDGE_NAME }}","vlan":{{ VLAN_NUM }},"mtu":8950,"macspoofchk":false}

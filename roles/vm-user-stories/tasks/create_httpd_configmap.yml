@@ -1,0 +1,21 @@
+---
+
+  - name: Retrieve content of the local 'index.html' file
+    slurp:
+      src: "{{ role_path }}/files/index.html"
+    register: index_html
+
+  - name: Decode and store 'index.html' content
+    set_fact:
+      index_html_content: "{{ index_html['content'] | b64decode }}"
+
+  - name: Render the 'httpd_config_map.j2' template to generate ConfigMap definition
+    ansible.builtin.template: 
+      src: "httpd_config_map.j2" 
+      dest: "files/httpd_config_map.yml"
+
+  - name: Deploy the generated ConfigMap yaml
+    k8s:
+      state: present
+      src: "files/httpd_config_map.yml"
+    register: httpd_config_map_info

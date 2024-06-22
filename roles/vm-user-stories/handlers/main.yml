@@ -1,0 +1,56 @@
+---
+
+  - name: Restart Virtual Machine
+    include_tasks: restart_virtual_machine.yml
+
+  - name: Ensure the primary Virtual Machine is accessible over SSH
+    ansible.builtin.wait_for:
+      port: 22
+      host: "{{ service_ip }}"
+      delay: 5
+      timeout: 360
+
+  - name: Ensure the cloned Virtual Machine is accessible over SSH
+    ansible.builtin.wait_for:
+      port: 22
+      host: "{{ clone_service_ip }}"
+      delay: 5
+      timeout: 360
+
+  - name: Validate the primary HTTPD service accessibility via the Route
+    ansible.builtin.uri:  
+      url: "http://{{ host_name }}" 
+      method: GET
+      status_code: 200
+      headers:
+        User-Agent: "curl/7.88.1"
+      return_content: yes
+    delegate_to: localhost
+    register: http_info  
+    until: http_info.status == 200  
+    retries: 6
+    delay: 10
+    failed_when: "index_html_content not in http_info.content"
+
+  - name: Print primary HTTP response status
+    ansible.builtin.debug:
+      msg: "HTTP response status from {{ host_name }}: {{ http_info.status }}"
+
+  - name: Validate the cloned HTTPD service accessibility via the Route
+    ansible.builtin.uri:  
+      url: "http://{{ clone_host_name }}" 
+      method: GET
+      status_code: 200
+      headers:
+        User-Agent: "curl/7.88.1"
+      return_content: yes
+    delegate_to: localhost
+    register: http_info  
+    until: http_info.status == 200  
+    retries: 6
+    delay: 10
+    failed_when: "index_html_content not in http_info.content"
+
+  - name: Print cloned HTTP response status
+    ansible.builtin.debug:
+      msg: "HTTP response status from {{ clone_host_name }}: {{ http_info.status }}"

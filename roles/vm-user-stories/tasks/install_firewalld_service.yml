@@ -1,0 +1,40 @@
+---
+
+  - name: Install firewalld Service on the VM
+    ansible.builtin.yum:
+      name: firewalld  
+      state: present 
+      update_cache: true
+      enablerepo: "{{ VM_NAME }}"
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no' 
+
+  - name: Start and enable firewalld Service
+    ansible.builtin.systemd:
+      name: firewalld
+      state: started
+      enabled: yes
+      daemon_reload: yes
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars:
+      ansible_user: "{{ VM_USER }}"  
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"  
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Allow traffic in default zone for http Service
+    firewalld:
+      service: http
+      permanent: true
+      immediate: true
+      state: enabled
+    become: yes
+    delegate_to: "{{ service_ip }}"
+    vars:
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'

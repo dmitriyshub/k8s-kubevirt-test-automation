@@ -1,0 +1,23 @@
+---
+
+  - name: Render the 'vm_live_migration.j2' template to generate Live Migration definition
+    ansible.builtin.template: 
+      src: "vm_live_migration.j2" 
+      dest: "files/vm_live_migration.yml"
+
+  - name: Deploy the generated Live Migration yaml
+    k8s:
+      state: present
+      src: "files/vm_live_migration.yml"
+    register: migration_info
+    ignore_errors: true
+
+  - name: Ensure the Live Migration is succeeded
+    k8s_info:
+      kind: VirtualMachineInstanceMigration
+      name: "{{ VM_NAME ~ '-migration-job' }}"
+      namespace: "{{ PROJECT }}"
+    register: migration_status
+    until: migration_status.resources is defined and migration_status.resources | length > 0 and migration_status.resources[0].status.phase == "Succeeded"
+    retries: 12
+    delay: 10

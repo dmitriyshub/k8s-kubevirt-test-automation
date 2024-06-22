@@ -1,0 +1,13 @@
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  annotations:
+    description: CNV Linux Bridge
+    k8s.v1.cni.cncf.io/resourceName: bridge.network.kubevirt.io/bridge-net
+  name: post-upgrade-testing-bridge-net
+  namespace: post-upgrade-testing
+  labels:
+    environment: ansible-test-rhel7-test-vm-az-a
+spec:
+  config: >-
+    {"name":"post-upgrade-testing-bridge-net","type":"cnv-bridge","cniVersion":"0.3.1","bridge":"bridge-network","vlan":32,"mtu":8950,"macspoofchk":false}

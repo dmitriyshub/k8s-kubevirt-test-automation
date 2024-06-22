@@ -1,0 +1,15 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  
+  name: rhel7-test-vm-az-a-clone-route
+  namespace: post-upgrade-testing
+  labels:
+    environment: ansible-test-rhel7-test-vm-az-a
+spec:
+  to:
+    kind: Service
+  
+    name: rhel7-test-vm-az-a-clone-svc-lb
+  port:
+    targetPort: 80

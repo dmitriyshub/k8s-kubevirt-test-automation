@@ -1,0 +1,13 @@
+apiVersion: snapshot.kubevirt.io/v1alpha1
+kind: VirtualMachineSnapshot
+metadata:
+  name: {{ VM_NAME }}-snapshot
+  namespace: {{ PROJECT }}
+  labels:
+    environment: ansible-test-{{ VM_NAME }}
+spec:
+  source:
+    apiGroup: kubevirt.io 
+    kind: VirtualMachine 
+    name: {{ VM_NAME }}
+    namespace: {{ PROJECT }}

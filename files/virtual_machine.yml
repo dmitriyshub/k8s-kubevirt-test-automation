@@ -1,0 +1,166 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  annotations:
+    vm.kubevirt.io/os: rhel7
+  namespace: post-upgrade-testing
+  labels:
+    environment: ansible-test-rhel7-test-vm-az-a
+  
+    vm: rhel7-test-vm-az-a-clone
+  name: rhel7-test-vm-az-a-clone
+spec:
+  dataVolumeTemplates:
+  
+    - apiVersion: cdi.kubevirt.io/v1beta1
+      kind: DataVolume
+      metadata:
+        name: rhel7-test-vm-az-a-clone
+      spec:
+        source:
+          pvc:
+            name: rhel7-test-vm-az-a
+            namespace: post-upgrade-testing
+        storage:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 73Gi
+          storageClassName: az-a
+          volumeMode: Block
+
+    - apiVersion: cdi.kubevirt.io/v1beta1
+      kind: DataVolume
+      metadata:
+        name: rhel7-test-vm-az-a-pvc1-clone
+      spec:
+        source:
+          pvc:
+            name: rhel7-test-vm-az-a-pvc1
+            namespace: post-upgrade-testing
+        storage:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 2Gi
+          storageClassName: az-a
+          volumeMode: Block
+
+    - apiVersion: cdi.kubevirt.io/v1beta1
+      kind: DataVolume
+      metadata:
+        name: rhel7-test-vm-az-a-pvc2-clone
+      spec:
+        source:
+          pvc:
+            name: rhel7-test-vm-az-a-pvc2
+            namespace: post-upgrade-testing
+        storage:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 2Gi
+          storageClassName: az-a
+          volumeMode: Block
+  running: true
+  template:
+    metadata:
+      annotations:
+        vm.kubevirt.io/flavor: tiny
+        vm.kubevirt.io/os: rhel7
+        vm.kubevirt.io/workload: server
+      labels:
+        environment: ansible-test-rhel7-test-vm-az-a
+  
+        kubevirt.io/domain: rhel7-test-vm-az-a-clone
+        kubevirt.io/size: small
+    spec:
+      accessCredentials:
+        - sshPublicKey:
+            propagationMethod:
+              configDrive: {}
+            source:
+              secret:
+                secretName: rhel7-test-vm-az-a-ssh-key
+      domain:
+        cpu:
+          cores: 1
+          sockets: 1
+          threads: 1
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: cloudinitdisk
+            - bootOrder: 1
+              disk:
+                bus: virtio
+              name:  rhel7-test-vm-az-a
+            - disk:  
+              name: httpd-config-disk
+              serial: config150759a777  
+            - disk:
+                bus: scsi
+              name:  pvc1
+              serial: pvc111150759a777
+            - disk:
+                bus: scsi
+              name:  pvc2
+              serial: pvc222150759a777
+          interfaces:
+            - masquerade: {}
+              model: virtio
+              name: nic-0
+            - bridge: {}
+              macAddress: '52:54:00:23:18:01'
+              model: virtio
+              name: nic-1
+          networkInterfaceMultiqueue: true
+          rng: {}
+        resources:
+          limits:
+            cpu: '1'
+          requests:
+            cpu: 250m
+            memory: 2Gi
+      networks:
+        - name: nic-0
+          pod: {}
+        - multus:
+            networkName: post-upgrade-testing-bridge-net
+          name: nic-1
+      terminationGracePeriodSeconds: 180
+      volumes:
+        - cloudInitConfigDrive:
+            userData: |-
+              #cloud-config
+              user: cloud-user
+              password: test
+              chpasswd: { expire: False }
+              bootcmd:
+                # mount the ConfigMap
+                - "sudo mkdir -p /mnt/configmap "
+                - "sudo mount /dev/$(lsblk --nodeps -no name,serial | grep config150759a777 | cut -f1 -d' ') /mnt/configmap"
+
+          name: cloudinitdisk
+        - dataVolume:
+            name:  rhel7-test-vm-az-a-clone
+          name:  rhel7-test-vm-az-a
+        - configMap:
+            name: rhel7-test-vm-az-a-config
+          name: httpd-config-disk
+        - name: pvc1
+          persistentVolumeClaim:
+            claimName: rhel7-test-vm-az-a-pvc1-clone
+            hotpluggable: true
+        - name: pvc2
+          persistentVolumeClaim:
+            claimName: rhel7-test-vm-az-a-pvc2-clone
+            hotpluggable: true
+
+
+
+

@@ -1,0 +1,66 @@
+---
+
+  - name: Create VMs from templates
+    block:
+      - name: Iterate through TEMPLATE_NAME
+        debug:
+          msg: "{{ item.key }} is {{ item.value }}"
+        loop: "{{ TEMPLATE_NAME | dict2items }}"
+
+      - name: Process the OpenShift template and create a VM
+        ansible.builtin.shell: |
+          oc login --token={{ AUTH_TOKEN }} --server={{ API_URL }}
+          oc process -n openshift {{ item.value }} -p NAME="{{ item.value }}"-test  | oc apply -f - -n "{{ PROJECT }}"
+        loop: "{{ TEMPLATE_NAME | dict2items }}"
+
+      - name: Ensure the Virtual Machine is created
+        k8s_info:
+          kind: VirtualMachine
+          name: "{{ item.value }}-test"
+          namespace: "{{ PROJECT }}"
+        register: vm_info
+        retries: 18 
+        delay: 10 
+        until: vm_info.resources | length > 0
+        loop: "{{ TEMPLATE_NAME | dict2items }}"
+
+      - name: Start the VMs
+        k8s:
+          state: present
+          definition:
+            apiVersion: kubevirt.io/v1
+            kind: VirtualMachine
+            metadata: 
+              name: "{{ item.value }}-test"
+              namespace: "{{ PROJECT }}"
+            spec:
+              running: true
+        loop: "{{ TEMPLATE_NAME | dict2items }}"
+
+      - name: Ensure the VM is in 'Ready' Status
+        k8s_info:
+          kind: VirtualMachine
+          name: "{{ item.value }}-test"
+          namespace: "{{ PROJECT }}"
+        register: vm_info
+        retries: 24 
+        delay: 10 
+        until:
+          - vm_info.resources[0].status.conditions is defined
+          - "'Ready' in vm_info.resources[0].status.conditions | map(attribute='type') | list"
+          - "vm_info.resources[0].status.conditions | json_query('[?type==`Ready`].status') | first == 'True'"
+        loop: "{{ TEMPLATE_NAME | dict2items }}"
+
+    rescue:
+      - name: Fail the task
+        ansible.builtin.fail:
+          msg: "Failed to create and start the VMs from templates!"
+    
+    always:
+      - name: Delete all vms
+        k8s:
+          state: absent
+          namespace: "{{ PROJECT }}"
+          name: "{{ item.value }}-test"
+          kind: VirtualMachine
+        loop: "{{ TEMPLATE_NAME | dict2items }}"

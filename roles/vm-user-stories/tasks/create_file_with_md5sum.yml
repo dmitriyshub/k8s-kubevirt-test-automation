@@ -1,0 +1,29 @@
+---
+
+  - name: Create a checksum placeholder file at the specified path
+    ansible.builtin.copy:
+      dest: "{{ LVM_MOUNT_PATH ~ '/md5sum.txt' }}"
+      content: "This is an md5sum checksum file"
+      mode: 0644
+    become: true
+    delegate_to: "{{ service_ip }}"
+    vars:
+      ansible_user: "{{ VM_USER }}"  
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"  
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Retrieve the MD5 checksum for the created file
+    ansible.builtin.stat:
+      path: "{{ LVM_MOUNT_PATH ~ '/md5sum.txt' }}"
+      checksum_algorithm: md5
+    register: file_info
+    become: true
+    delegate_to: "{{ service_ip }}"
+    vars:
+      ansible_user: "{{ VM_USER }}"  
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"  
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Store the file's MD5 checksum in a variable
+    set_fact:
+      file_md5sum: "{{ file_info.stat.checksum }}"

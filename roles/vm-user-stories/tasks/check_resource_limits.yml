@@ -1,0 +1,47 @@
+---
+
+  - name: Retrieve the VirtualMachine (VM) details
+    k8s_info:
+      api_version: kubevirt.io/v1
+      kind: VirtualMachine
+      name: "{{ VM_NAME }}"
+      namespace: "{{ PROJECT }}"
+    register: vm_info
+
+  - name: Capture VM CPU limits
+    ansible.builtin.set_fact:
+      vm_limits: "{{ vm_info.resources[0].spec.template.spec.domain.resources.limits.cpu }}"
+
+  - name: Retrieve the VirtualMachineInstance (VMI) details
+    k8s_info:
+      api_version: kubevirt.io/v1
+      kind: VirtualMachineInstance
+      name: "{{ VM_NAME }}"
+      namespace: "{{ PROJECT }}"
+    register: vmi_info
+
+  - name: Capture VMI CPU limits
+    ansible.builtin.set_fact:
+      vmi_limits: "{{ vmi_info.resources[0].spec.domain.resources.limits.cpu }}"
+
+  - name: Retrieve the 'virt-launcher' Kubevirt Pod details
+    k8s_info:
+      kind: Pod
+      namespace: "{{ PROJECT }}"
+      label_selectors:
+        - "kubevirt.io/domain={{ VM_NAME }}"
+    register: pod_info
+
+  - name: Capture 'virt-launcher' Pod CPU limits
+    ansible.builtin.set_fact:
+      pod_limits: "{{ pod_info.resources[0].spec.containers[0].resources.limits.cpu }}"
+
+  - name: Validate if CPU limits are consistent across VM, VMI, and Pod
+    ansible.builtin.fail:
+      msg: "CPU limits are inconsistent!"
+    when: vm_limits != pod_limits or vm_limits != vmi_limits
+
+  - name: Confirm CPU limits consistency
+    ansible.builtin.debug:
+      msg: "All CPU limits (VM, VMI, and Pod) are consistent!"
+    when: vm_limits == pod_limits and vm_limits == vmi_limits

@@ -1,0 +1,95 @@
+---
+
+  - name: Collect details about VM devices
+    ansible.builtin.setup:
+      filter: ansible_devices
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Initialize an empty list for devices by serial number
+    ansible.builtin.set_fact:
+      devices_by_serial: []
+
+  - name: Populate devices by matching specified serial numbers
+    ansible.builtin.set_fact:
+      devices_by_serial: "{{ devices_by_serial | default([]) + [item.key] }}"
+    with_dict: "{{ ansible_devices }}"
+    when: 
+      - "'serial' in item.value"
+      - "item.value.serial == PVC1_SERIAL or item.value.serial == PVC2_SERIAL"
+
+  - name: Install LVM related packages on the VM
+    ansible.builtin.package:
+      name:
+        - lvm2
+      state: present
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Create an LVM group using identified devices
+    lvg:
+      vg: "lvm_group"
+      pvs: 
+        - "/dev/{{ devices_by_serial[0] }}"
+        - "/dev/{{ devices_by_serial[1] }}"
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Define a logical volume using the entire free space of the LVM group
+    lvol:
+      vg: "lvm_group"
+      lv: "lvm_volume"
+      size: 100%FREE
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Create an 'ext4' filesystem on the logical volume
+    ansible.builtin.filesystem:
+      fstype: ext4
+      dev: /dev/lvm_group/lvm_volume
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Ensure the LVM mount point is present
+    ansible.builtin.file:
+      path: "{{ LVM_MOUNT_PATH }}"
+      state: directory
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Mount the logical volume at the mount point
+    ansible.builtin.mount:
+      path: "{{ LVM_MOUNT_PATH }}"
+      src: /dev/lvm_group/lvm_volume
+      fstype: ext4
+      state: mounted
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'

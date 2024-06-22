@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ VM_NAME }}-pvc1
+  namespace: {{ PROJECT }}
+  labels:
+    environment: ansible-test-{{ VM_NAME }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Block
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: {{ STORAGE_CLASS_NAME }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ VM_NAME }}-pvc2
+  namespace: {{ PROJECT }}
+  labels:
+    environment: ansible-test-{{ VM_NAME }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Block
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: {{ STORAGE_CLASS_NAME }}

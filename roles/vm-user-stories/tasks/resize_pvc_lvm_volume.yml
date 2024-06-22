@@ -1,0 +1,73 @@
+---
+
+  - name: Extend the PVCs to 2Gi
+    k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: "{{ item }}"
+          namespace: "{{ PROJECT }}"
+        spec:
+          resources:
+            requests:
+              storage: 2Gi
+    with_items:
+      - "{{ VM_NAME ~ '-pvc1' }}"
+      - "{{ VM_NAME ~ '-pvc2' }}"
+
+  - name: Resize the LVM physical volumes using identified devices
+    command: "pvresize /dev/{{ item }}"
+    with_items:
+      - "{{ devices_by_serial[0] }}"
+      - "{{ devices_by_serial[1] }}"
+    become: yes
+    delegate_to: "{{ service_ip }}"
+    vars:
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    when: ansible_ver == 2.9
+    
+  - name: Extend an LVM group using identified devices
+    lvg:
+      vg: "lvm_group"
+      pvs: 
+        - "/dev/{{ devices_by_serial[0] }}"
+        - "/dev/{{ devices_by_serial[1] }}"
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    when: ansible_ver == 2.9
+
+  - name: Extend an LVM group using identified devices
+    lvg:
+      vg: "lvm_group"
+      pvs: 
+        - "/dev/{{ devices_by_serial[0] }}"
+        - "/dev/{{ devices_by_serial[1] }}"
+      pvresize: true 
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    when: ansible_ver == 2.15
+
+  - name: Resize a logical volume using the entire free space of the LVM group
+    lvol:
+      vg: "lvm_group"
+      lv: "lvm_volume"
+      size: 100%PVS
+      resizefs: yes
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'

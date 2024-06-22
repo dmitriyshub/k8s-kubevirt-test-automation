@@ -1,0 +1,14 @@
+apiVersion: snapshot.kubevirt.io/v1alpha1
+kind: VirtualMachineRestore
+metadata:
+  name: {{ VM_NAME }}-restore
+  namespace: {{ PROJECT }}
+  labels:
+    environment: ansible-test-{{ VM_NAME }}
+spec:
+  target:
+    apiGroup: kubevirt.io 
+    kind: VirtualMachine 
+    name: {{ VM_NAME }}
+    namespace: {{ PROJECT }}
+  virtualMachineSnapshotName: {{ VM_NAME }}-snapshot

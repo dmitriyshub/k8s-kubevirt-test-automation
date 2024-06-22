@@ -1,0 +1,12 @@
+---
+
+  - name: Render the 'net_attach_def.j2' template to generate NetworkAttachmentDefinition definition
+    ansible.builtin.template: 
+      src: "net_attach_def.j2" 
+      dest: "files/net_attach_def.yml"
+
+  - name: Deploy the generated NetworkAttachmentDefinition yaml
+    k8s:
+      state: present
+      src: "files/net_attach_def.yml"
+    register: net_attach_def_info

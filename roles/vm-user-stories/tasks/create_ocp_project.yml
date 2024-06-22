@@ -1,0 +1,21 @@
+---
+
+  - name: Check if the Project already exist
+    kubernetes.core.k8s_info:
+      api_version: project.openshift.io/v1
+      kind: Project
+      name: "{{ PROJECT }}"
+    register: project_info
+
+  - name: Render the 'ocp_project.j2' template to generate Project definition
+    ansible.builtin.template: 
+      src: "ocp_project.j2" 
+      dest: "files/ocp_project.yml"
+    when: project_info.resources | length == 0  
+
+  - name: Deploy the generated Project yaml
+    k8s:
+      state: present
+      src: "files/ocp_project.yml"
+    register: project_output
+    when: project_info.resources | length == 0

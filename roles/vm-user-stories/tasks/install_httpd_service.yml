@@ -1,0 +1,56 @@
+---
+
+  - name: Add Yum Repository
+    ansible.builtin.yum_repository:
+      name: "{{ VM_NAME }}"
+      description: rhel7 repository
+      baseurl: "{{ YUM_REPO_URL }}"
+      enabled: yes
+      gpgcheck: no
+    become: yes
+    delegate_to: "{{ service_ip }}"
+    vars:
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+  - name: Install HTTPD Service on the VM
+    ansible.builtin.yum:
+      name: httpd  
+      state: present 
+      update_cache: true
+      enablerepo: "{{ VM_NAME}}"
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no' 
+
+  - name: Start and enable HTTPD Service
+    ansible.builtin.systemd:
+      name: httpd
+      state: started
+      enabled: yes
+      daemon_reload: yes
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars:
+      ansible_user: "{{ VM_USER }}"  
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"  
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Copy index.html file to httpd service path
+    ansible.builtin.copy:
+      src: "{{ CM_MOUNT_PATH ~ '/index.html'}}"
+      dest: /var/www/html
+      owner: apache
+      group: apache
+      mode: '0644'
+      remote_src: true
+    become: yes
+    delegate_to: "{{ service_ip }}"  
+    vars:
+      ansible_user: "{{ VM_USER }}"  
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"  
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'

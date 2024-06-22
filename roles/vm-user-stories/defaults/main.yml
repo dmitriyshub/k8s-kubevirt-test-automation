@@ -1,0 +1,57 @@
+# VM username and password
+VM_USER: cloud-user
+VM_PASSWORD: test
+
+# Serial number for disks
+CONFIG_SERIAL: config150759a777
+PVC1_SERIAL: pvc111150759a777
+PVC2_SERIAL: pvc222150759a777
+
+# Mount path for lvm and config map
+CM_MOUNT_PATH: /mnt/configmap
+LVM_MOUNT_PATH: /mnt/lvm_mount_point
+
+# Default condition for jinja2 vm template (condition: new_pvc adds pvcs to virtual_machine)
+condition: none
+# Vlan type ( vlan: dynamic only for vlans with dhcp server )
+vlan: static
+#Ansible version for lvm tasks
+ansible_ver: 2.9
+# Live migration task
+livemigration: false
+# Affinity and antiaffinity rules
+affinity: false
+
+# Project name for all objects
+PROJECT: post-upgrade-testing
+# VM name for all objects including pvcs,configmaps,secrets etc
+VM_NAME: rhel7-test-vm-az-a
+# Operation System Image Details
+OS_PVC_NAME: rhel7-9-az-a
+OS_PVC_PROJECT_NAME: openshift-virtualization-os-images
+# Storage Class for all PVCs
+STORAGE_CLASS_NAME: az-a # ocs-external-storagecluster-ceph-rbd
+# MetalLB Address Pool for SVC
+IP_ADDRESS_POOL: default
+# Yum Repository for RHEL7 URL
+YUM_REPO_URL: http://yum-rhel7.com/rhel-7/rhel-7-server-rpms
+
+# Bridge Network Name and Number
+BRIDGE_NAME: bridge-network
+VLAN_NUM: 32
+# Vlan bridge NIC IPs
+VM_BRIDGE_IP: 192.168.32.199
+CLONE_BRIDGE_IP: 192.168.32.198
+BRIDGE_GATEWAY: 192.168.32.254
+
+# OpenShift VM Templates names
+TEMPLATE_NAME:
+  temp1: rhel7-9-az-a
+  temp2: rhel7-9-az-b
+  temp3: rhel7-9-az-c
+  temp4: rhel8-4-az-a
+  temp5: rhel8-4-az-b
+  temp6: rhel8-4-az-c
+  temp7: windows-2016-az-a
+  temp8: windows-2016-az-b
+  temp9: windows-2016-az-c

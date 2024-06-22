@@ -1,0 +1,15 @@
+---
+
+  - name: Retrieve ca bundle ConfigMap from cluster
+    k8s_info:
+      namespace: openshift-config
+      kind: ConfigMap
+      name: user-ca-bundle
+      validate_certs: false
+    register: ca_bundle_cm
+
+  - name: Save CA Bundle certificate to local file
+    copy:
+      content: "{{ ca_bundle_cm['resources'][0]['data']['ca-bundle.crt'] }}"
+      dest: "{{ CA_CERT }}"
+      mode: 0644

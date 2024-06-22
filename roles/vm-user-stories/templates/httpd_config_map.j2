@@ -1,0 +1,10 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ VM_NAME }}-config
+  namespace: {{ PROJECT }}
+  labels:
+    environment: ansible-test-{{ VM_NAME }}
+data:
+  index.html: |
+    {{ index_html_content | indent(4) }}

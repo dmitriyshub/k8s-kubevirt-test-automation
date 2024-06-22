@@ -1,0 +1,63 @@
+---
+
+  - name: Set initial values for facts and variables
+    ansible.builtin.set_fact:
+      "{{ item.key }}": "{{ item.value }}"
+    loop:
+      - { key: 'remote_facts', value: {} }
+      - { key: 'clone_remote_facts', value: {} }
+      - { key: 'bridge_nic_name', value: '' }
+      - { key: 'clone_bridge_nic_name', value: '' }
+
+  - name: Retrieve network details from primary VM
+    ansible.builtin.setup:
+    become: yes
+    delegate_to: "{{ service_ip }}"
+    vars:
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    register: remote_facts
+
+  - name: Retrieve network details from cloned VM
+    ansible.builtin.setup:
+    become: yes
+    delegate_to: "{{ clone_service_ip }}"
+    vars:
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    register: clone_remote_facts
+
+  - name: Identify primary VM's NIC name using MAC address
+    set_fact:
+      bridge_nic_name: "{{ remote_facts['ansible_facts'][item]['device'] }}"
+    when: remote_facts['ansible_facts'][item]['macaddress'] == VM_BRIDGE_MAC
+    with_items: 
+      - "{{ remote_facts['ansible_facts'].keys() | select('match', '^ansible_(eth[0-9]+|enp[0-9]s0)') | list }}"
+
+
+  - name: Identify cloned VM's NIC name using MAC address
+    set_fact:
+      clone_bridge_nic_name: "{{ clone_remote_facts['ansible_facts'][item]['device'] }}"
+    when: clone_remote_facts['ansible_facts'][item]['macaddress'] == CLONE_BRIDGE_MAC
+    with_items: 
+      - "{{ remote_facts['ansible_facts'].keys() | select('match', '^ansible_(eth[0-9]+|enp[0-9]s0)') | list }}"
+      
+  - name: Configure static IP settings for VM VLAN Bridge NICs
+    nmcli:
+      conn_name: my-eth1
+      ifname: "{{ item[0] }}"
+      type: ethernet
+      ip4: "{{ item[1] }}/24"
+      gw4: "{{ BRIDGE_GATEWAY }}"
+      state: present
+    become: true  
+    delegate_to: "{{ item[2] }}"
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    loop:
+      - ["{{ bridge_nic_name }}", "{{ VM_BRIDGE_IP }}", "{{ service_ip }}"]
+      - ["{{ clone_bridge_nic_name }}", "{{ CLONE_BRIDGE_IP }}", "{{ clone_service_ip }}"]

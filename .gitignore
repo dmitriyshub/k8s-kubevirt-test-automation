@@ -1,0 +1,5 @@
+#.gitignore
+ansible.cfg
+inventory.ini
+#token
+#ca.crt

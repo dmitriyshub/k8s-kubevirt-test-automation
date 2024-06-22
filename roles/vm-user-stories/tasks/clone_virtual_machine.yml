@@ -1,0 +1,93 @@
+---
+
+  - name: Clone Virtual Machine
+    block:
+      - name: Check if the VM is already exists
+        k8s_info:
+          kind: VirtualMachine
+          name: "{{ VM_NAME }}"
+          namespace: "{{ PROJECT }}"
+        register: existing_vm_info
+
+      - name: Stop the VM
+        k8s:
+          state: present
+          definition:
+            apiVersion: kubevirt.io/v1alpha3
+            kind: VirtualMachine
+            metadata:
+              name: "{{ VM_NAME }}"
+              namespace: "{{ PROJECT }}"
+            spec:
+              running: false
+        when: existing_vm_info.resources | length >= 1
+
+      - name: Ensure the Virtual Machine is stopped
+        k8s_info:
+          kind: VirtualMachine
+          name: "{{ VM_NAME }}"
+          namespace: "{{ PROJECT }}"
+        register: vm_info
+        until: vm_info.resources[0].spec.running == false
+        retries: 6
+        delay: 10
+        when: existing_vm_info.resources | length >= 1
+
+      - name: Render the 'virtual_machine.j2' template to generate cloned VM definition
+        ansible.builtin.template: 
+          src: "virtual_machine.j2" 
+          dest: "files/virtual_machine.yml"
+        when: existing_vm_info.resources | length >= 1
+
+      - name: Deploy the generated cloned VM yaml
+        k8s:
+          state: present
+          src: "files/virtual_machine.yml"
+        register: vm_info
+        when: existing_vm_info.resources | length >= 1
+        notify: 
+          - Ensure the cloned Virtual Machine is accessible over SSH
+          - Validate the cloned HTTPD service accessibility via the Route
+          - Print cloned HTTP response status
+
+      - name: Ensure the Virtual Machine is created
+        k8s_info:
+          kind: VirtualMachine
+          name: "{{ VM_NAME ~ '-clone' }}"
+          namespace: "{{ PROJECT }}"
+        register: vm_info
+        retries: 24 
+        delay: 10 
+        until: vm_info.resources | length > 0 
+        when: existing_vm_info.resources | length >= 1
+
+      - name: Ensure the VM are in 'Ready' Status
+        k8s_info:
+          kind: VirtualMachine
+          name: "{{ VM_NAME ~ '-clone' }}"
+          namespace: "{{ PROJECT }}"
+        register: vm_info
+        retries: 24 
+        delay: 10 
+        until:
+          - vm_info.resources[0].status.conditions is defined
+          - "'Ready' in vm_info.resources[0].status.conditions | map(attribute='type') | list"
+          - "vm_info.resources[0].status.conditions | json_query('[?type==`Ready`].status') | first == 'True'"
+        when: existing_vm_info.resources | length >= 1
+
+    rescue:
+      - name: Set initial values for vm_info variable
+        ansible.builtin.set_fact:
+          vm_info:
+            resources: []
+        when: vm_info is undefined
+
+      - name: Delete the Virtual Machine 
+        k8s:
+          state: absent
+          definition: "{{ vm_info.resources[0] }}"
+        when: vm_info.resources | length > 0
+
+      - name: Fail the task
+        ansible.builtin.fail:
+          msg: "Failed to create and start the VM!"

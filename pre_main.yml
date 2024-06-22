@@ -1,0 +1,13 @@
+- name: Create local cluster CA bundle file
+  hosts: localhost
+  become: false
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ API_URL }}"
+      api_key: "{{ AUTH_TOKEN }}"
+  tasks:
+    - name: Create CA bundle 
+      include_role:
+        name: vm-user-stories
+        tasks_from: prerequisites_ca.yml

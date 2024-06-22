@@ -1,0 +1,42 @@
+---
+
+  - name: Render the 'service_lb.j2' template to generate Service definition
+    ansible.builtin.template: 
+      src: "service_lb.j2" 
+      dest: "files/service_lb.yml"
+
+  - name: Deploy the generated ServiceLB yaml
+    k8s:
+      state: present
+      src: "files/service_lb.yml"
+    register: servicelb_info
+    until: servicelb_info.result.status.loadBalancer.ingress[0].ip is defined
+    retries: 12
+    delay: 10
+
+  - name: Ensure the Virtual Machine is accessible over SSH
+    ansible.builtin.wait_for:
+      port: 22
+      host: "{{ servicelb_info.result.status.loadBalancer.ingress[0].ip }}"
+      delay: 5
+      timeout: 360
+
+  - name: Identify primary ServiceLB IP address in a variable 
+    ansible.builtin.set_fact:
+      service_ip: "{{ servicelb_info.result.status.loadBalancer.ingress[0].ip }}"
+    when: condition != "clone"
+
+  - name: Output the Service IP address of the deployed ServiceLB
+    ansible.builtin.debug:
+      var: service_ip
+    when: condition != "clone"
+    
+  - name: Identify cloned ServiceLB IP address in a variable 
+    ansible.builtin.set_fact:
+      clone_service_ip: "{{ servicelb_info.result.status.loadBalancer.ingress[0].ip }}"
+    when: condition == "clone"
+
+  - name: Output the Service IP address of the deployed ServiceLB
+    ansible.builtin.debug:
+      var: clone_service_ip
+    when: condition == "clone"

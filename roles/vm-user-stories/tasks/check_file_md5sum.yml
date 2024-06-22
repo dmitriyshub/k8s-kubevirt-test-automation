@@ -1,0 +1,24 @@
+---
+
+  - name: Retrieve the MD5 checksum of the file again
+    ansible.builtin.stat:
+      path: "{{ LVM_MOUNT_PATH ~ '/md5sum.txt' }}"
+      checksum_algorithm: md5
+    register: new_file_info
+    become: true
+    delegate_to: "{{ service_ip }}"
+    vars:
+      ansible_user: "{{ VM_USER }}"  
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"  
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Store the new file's MD5 checksum in a variable
+    set_fact:
+      new_file_md5sum: "{{ new_file_info.stat.checksum }}"
+
+  - name: Verify that the md5sums are identical
+    ansible.builtin.assert:
+      that:
+        - file_md5sum == new_file_md5sum
+      fail_msg: "{{ file_md5sum }} != {{ new_file_md5sum }}"
+      success_msg: "{{ file_md5sum }} == {{ new_file_md5sum }}"

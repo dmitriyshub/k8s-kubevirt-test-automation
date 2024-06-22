@@ -1,0 +1,80 @@
+---
+
+  - name: Stop the VM
+    k8s:
+      state: present
+      definition:
+        apiVersion: kubevirt.io/v1alpha3
+        kind: VirtualMachine
+        metadata:
+          name: "{{ VM_NAME }}"
+          namespace: "{{ PROJECT }}"
+        spec:
+          running: false
+    register: result
+    until: result is success
+    retries: 6
+    delay: 10
+
+  - name: Check if VM has stopped
+    k8s_info:
+      kind: VirtualMachine
+      namespace: "{{ PROJECT }}"
+      name: "{{ VM_NAME }}"
+    register: vm_info
+    retries: 12
+    delay: 10
+    until: vm_info.resources[0].spec.running == false
+
+
+  - name: Start the VM
+    k8s:
+      state: present
+      definition:
+        apiVersion: kubevirt.io/v1alpha3
+        kind: VirtualMachine
+        metadata:
+          name: "{{ VM_NAME }}"
+          namespace: "{{ PROJECT }}"
+        spec:
+          running: true
+    register: result
+    until: result is success
+    retries: 6
+    delay: 10
+    notify: 
+      - Ensure the primary Virtual Machine is accessible over SSH
+
+  - name: Wait until the VM is created
+    k8s_info:
+      kind: VirtualMachine
+      name: "{{ VM_NAME }}"
+      namespace: "{{ PROJECT }}"
+    register: vm_info
+    retries: 12 
+    delay: 10 
+    until: vm_info.resources | length > 0 
+
+  - name: Check if VM is running
+    k8s_info:
+      kind: VirtualMachine
+      name: "{{ VM_NAME }}"
+      namespace: "{{ PROJECT }}"
+    register: vm_info
+    retries: 6
+    delay: 10
+    until: vm_info.resources[0].spec.running == true
+
+
+  - name: Wait until the VM is ready
+    k8s_info:
+      kind: VirtualMachine
+      name: "{{ VM_NAME }}"
+      namespace: "{{ PROJECT }}"
+    register: vm_info
+    retries: 24 
+    delay: 10 
+    until:
+      - vm_info.resources[0].status.conditions is defined
+      - "'Ready' in vm_info.resources[0].status.conditions | map(attribute='type') | list"
+      - "vm_info.resources[0].status.conditions | json_query('[?type==`Ready`].status') | first == 'True'"

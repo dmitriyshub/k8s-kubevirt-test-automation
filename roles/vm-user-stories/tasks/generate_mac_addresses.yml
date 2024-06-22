@@ -1,0 +1,23 @@
+---
+
+  - name: Generate random VM Bridge MAC address
+    ansible.builtin.set_fact:
+      random_mac: "525400{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}"
+    run_once: true
+
+  - name: Format the VM MAC address
+    ansible.builtin.set_fact:
+      VM_BRIDGE_MAC: "{{ [random_mac[0:2], random_mac[2:4], random_mac[4:6], random_mac[6:8], random_mac[8:10], random_mac[10:12]] | join(':') }}"
+
+  - name: Generate random Clone VM Bridge MAC address until it's different from VM Bridge MAC
+    block:
+    - name: Generate MAC
+      ansible.builtin.set_fact:
+        clone_random_mac: "525400{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}"
+      until: (clone_random_mac is not defined) or ([clone_random_mac[0:2], clone_random_mac[2:4], clone_random_mac[4:6], clone_random_mac[6:8], clone_random_mac[8:10], clone_random_mac[10:12]] | join(":") != VM_BRIDGE_MAC)
+      retries: 3
+
+    - name: Format the Clone MAC address
+      ansible.builtin.set_fact:
+        CLONE_BRIDGE_MAC: "{{ [clone_random_mac[0:2], clone_random_mac[2:4], clone_random_mac[4:6], clone_random_mac[6:8], clone_random_mac[8:10], clone_random_mac[10:12]] | join(':') }}"
+

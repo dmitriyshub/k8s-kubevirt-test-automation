@@ -1,0 +1,135 @@
+---
+
+  - name: Retrieve all VMs info 
+    k8s_info:
+      namespace: "{{ PROJECT }}"
+      kind: VirtualMachine
+      label_selectors:
+        - "environment=ansible-test-{{ VM_NAME }}"
+    register: vm_objects
+
+  - name: Delete all VM objects
+    k8s:
+      state: absent
+      namespace: "{{ PROJECT }}"
+      definition: "{{ item }}"
+      kind: VirtualMachine
+    with_items: "{{ vm_objects.resources }}"
+    loop_control:
+      label: "Deleting object {{ item.metadata.name }}"
+
+  - name: Retrieve all SVC objects
+    k8s_info:
+      namespace: "{{ PROJECT }}"
+      kind: Service
+      label_selectors:
+        - "environment=ansible-test-{{ VM_NAME }}"
+    register: svc_objects
+
+  - name: Delete all SVC objects
+    k8s:
+      state: absent
+      namespace: "{{ PROJECT }}"
+      definition: "{{ item }}"
+      kind: Service
+    with_items: "{{ svc_objects.resources }}"
+    loop_control:
+      label: "Deleting object {{ item.metadata.name }}"
+
+  - name: Retrieve all PVC objects
+    k8s_info:
+      namespace: "{{ PROJECT }}"
+      kind: PersistentVolumeClaim
+      label_selectors:
+        - "environment=ansible-test-{{ VM_NAME }}"
+    register: pvc_objects  
+
+  - name: Delete all PVC objects
+    k8s:
+      state: absent
+      namespace: "{{ PROJECT }}"
+      definition: "{{ item }}"
+      kind: PersistentVolumeClaim
+    with_items: "{{ pvc_objects.resources }}"
+    loop_control:
+      label: "Deleting object {{ item.metadata.name }}"
+
+  - name: Retrieve all Route objects
+    k8s_info:
+      namespace: "{{ PROJECT }}"
+      kind: Route
+      label_selectors:
+        - "environment=ansible-test-{{ VM_NAME }}"
+    register: route_objects 
+
+  - name: Delete all Route objects
+    k8s:
+      state: absent
+      namespace: "{{ PROJECT }}"
+      definition: "{{ item }}"
+      kind: Route
+    with_items: "{{ route_objects.resources }}"
+    loop_control:
+      label: "Deleting object {{ item.metadata.name }}"
+
+  - name: Retrieve all ConfigMap objects
+    k8s_info:
+      namespace: "{{ PROJECT }}"
+      kind: ConfigMap
+      label_selectors:
+        - "environment=ansible-test-{{ VM_NAME }}"
+    register: cm_objects  
+
+  - name: Delete all ConfigMap objects
+    k8s:
+      state: absent
+      namespace: "{{ PROJECT }}"
+      definition: "{{ item }}"
+      kind: ConfigMap
+    with_items: "{{ cm_objects.resources }}"
+    loop_control:
+      label: "Deleting object {{ item.metadata.name }}"
+
+  - name: Retrieve all Secret objects
+    k8s_info:
+      namespace: "{{ PROJECT }}"
+      kind: Secret
+      label_selectors:
+        - "environment=ansible-test-{{ VM_NAME }}"
+    register: secret_objects  
+
+  - name: Delete all Secret objects
+    k8s:
+      state: absent
+      namespace: "{{ PROJECT }}"
+      definition: "{{ item }}"
+      kind: Secret
+    with_items: "{{ secret_objects.resources }}"
+    loop_control:
+      label: "Deleting object {{ item.metadata.name }}"
+
+  - name: Retrieve all NetworkAttachmentDefinition objects
+    k8s_info:
+      namespace: "{{ PROJECT }}"
+      kind: NetworkAttachmentDefinition
+      label_selectors:
+        - "environment=ansible-test-{{ VM_NAME }}"
+    register: nad_objects  
+
+  - name: Delete all NetworkAttachmentDefinition objects
+    k8s:
+      state: absent
+      namespace: "{{ PROJECT }}"
+      definition: "{{ item }}"
+      kind: NetworkAttachmentDefinition
+    with_items: "{{ nad_objects.resources }}"
+    loop_control:
+      label: "Deleting object {{ item.metadata.name }}"
+
+  - name: Delete SSH Key Pair files
+    file:
+      path: "{{ item }}"
+      state: absent
+    loop:
+      - "{{ SSH_PUBLIC_KEY }}"
+      - "{{ SSH_PRIVATE_KEY }}"

@@ -1,0 +1,131 @@
+---
+
+  - block:
+      - name: "Generate SSH Key Pair"
+        include_tasks: generate_ssh_keys.yml
+        tags: generate-ssh-keys
+
+      - name: "Generate Mac Addresses"
+        include_tasks: generate_mac_addresses.yml
+        tags: generate_mac_addresses
+
+      - name: "Create OCP Project if it doesn't exist"
+        include_tasks: create_ocp_project.yml
+        tags: create-ocp-project
+
+      - name: "Create HTTPD Index file ConfigMap"
+        include_tasks: create_httpd_configmap.yml
+        tags: create-httpd-configmap
+
+      - name: "Create SSH Public Key Secret"
+        include_tasks: create_pub_key_secret.yml
+        tags: create-pub-key-secret
+
+      - name: "Create Network Attachment Definition"
+        include_tasks: create_net_attach_def.yml
+        tags: create-net-attach-def
+
+      - name: "Create Virtual Machine and Check VM Ready Status"
+        include_tasks: create_virtual_machine.yml
+        tags: create-virtual-machine
+
+      - name: "Create Service LoadBalancer and Check SSH Connectivity"
+        include_tasks: create_service_lb.yml
+        tags: create-service-lb
+
+      - name: "Install and Configure HTTPD Service"
+        include_tasks: install_httpd_service.yml
+        tags: install-httpd-service
+
+      - name: "Install and Configure Firewalld Service"
+        include_tasks: install_firewalld_service.yml
+        tags: install-firewalld-service
+
+      - name: "Create OCP Route and Check HTTP Status Code"
+        include_tasks: create_ocp_route.yml
+        tags: create-ocp-route
+
+      - name: "Create Persistent Volume Claims and Check Bound Status"
+        include_tasks: create_new_pvcs.yml
+        tags: create-new-pvc
+
+      - name: "Attach PVCs to Virtual Machine"
+        include_tasks: create_virtual_machine.yml
+        tags: attach-pvcs-virtual-machine
+        vars:
+          condition: "new pvcs"
+
+      - name: "Restart Virtual Machine and Check VM Ready Status"
+        include_tasks: restart_virtual_machine.yml
+        tags: restart-virtual-machine
+
+      - name: "Execute Handlers"
+        meta: flush_handlers
+
+      - name: "Create and Mount LVM Volume"
+        include_tasks: create_lvm_volume.yml
+        tags: create-lvm-volume
+
+      - name: "Create File and get MD5SUM checksum"
+        include_tasks: create_file_with_md5sum.yml
+        tags: create-file-with-md5sum
+
+      - name: "Extend PVCs and Resize LVM"
+        include_tasks: resize_pvc_lvm_volume.yml
+        tags: resize-pvc-lvm-volume
+
+      - name: "Compare and Check MD5SUM checksum"
+        include_tasks: check_file_md5sum.yml
+        tags: check-file-md5sum
+
+      - name: "Perform VMI Live Migration and check Succeeded Status"
+        include_tasks: vm_live_migration.yml
+        tags: vm-live-migration
+        when: livemigration == true
+
+      - name: "Clone Virtual Machine and Check New VM Ready Status, SSH connectivity and HTTP Status Code"
+        include_tasks: "{{ item }}"
+        loop:
+          - clone_virtual_machine.yml
+          - create_service_lb.yml
+          - create_ocp_route.yml
+        tags: clone-virtual-machine
+        vars:
+          condition: "clone"
+
+      - name: "Execute Handlers"
+        meta: flush_handlers
+
+      - name: "Create Snapshot, Restore VM and Check Ready Status"
+        include_tasks: vm_snapshot_restore.yml
+        tags: vm-snapshot-restore
+
+      - name: "Execute Handlers"
+        meta: flush_handlers
+
+      - name: "Check MD5SUM file after restore"
+        include_tasks: check_file_md5sum.yml
+        tags: check-file-md5sum  
+
+      - name: "Configure Bridge Network Static IP"
+        include_tasks: configure_static_bridge.yml
+        tags: configure-static-bridge
+        when: vlan == 'static'
+
+      - name: "Check Bridge Network connectivity between VMs"
+        include_tasks: check_bridge_network.yml
+        tags: check-bridge-network  
+
+      - name: "Check VM Resource Limits"
+        include_tasks: check_resource_limits.yml
+        tags: check-resource-limits
+        
+    rescue:
+      - name: "An error occurred"
+        debug:
+          msg: "Some task failed during the role execution!"
+
+    always:
+      - name: "Delete all Objects"
+        include_tasks: delete_all_objects.yml
+        tags: delete-all-objects

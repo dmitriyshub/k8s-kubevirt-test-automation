@@ -1,0 +1,6 @@
+---
+
+  - name: Generate an OpenSSH local keypair
+    openssh_keypair:
+      path: "{{ HOME_DIR }}/.ssh/vm-key"
+      #force: true

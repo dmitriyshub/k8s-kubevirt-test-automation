@@ -1,0 +1,91 @@
+---
+
+- name: VM User Stories Testing OCP cluster
+  hosts: localhost
+  become: false
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ API_URL }}"
+      api_key: "{{ AUTH_TOKEN }}"
+      ca_cert: "{{ CA_CERT }}"
+  roles:
+    - name: "rhel7.9 test az-a"
+      role: vm-user-stories
+      vars:
+        OS_PVC_NAME: rhel7-9-az-a
+        VM_NAME: rhel7-test-vm-az-a
+        YUM_REPO_URL: http://yum.com/rhel-7/rhel-7-server-rpms # Private yum repository url
+        STORAGE_CLASS_NAME: az-a
+
+  #   - name: "rhel7.9 test az-b"
+  #     role: vm-user-stories
+  #     vars:
+  #       OS_PVC_NAME: rhel7-9-az-b
+  #       VM_NAME: rhel7-test-vm-az-b 
+  #       YUM_REPO_URL: http://yum.com/rhel-7/rhel-7-server-rpms # Private yum repository url
+  #       STORAGE_CLASS_NAME: az-b
+
+  #   - name: "rhel7.9 test az-c"
+  #     role: vm-user-stories
+  #     vars:
+  #       OS_PVC_NAME: rhel7-9-az-c 
+  #       VM_NAME: rhel7-test-vm-az-c
+  #       YUM_REPO_URL: http://yum.com/rhel-7/rhel-7-server-rpms # Private yum repository url
+  #       STORAGE_CLASS_NAME: az-c
+  #       affinity: false
+
+  #   - name: "rhel8.4 test az-a"
+  #     role: vm-user-stories
+  #     vars:
+  #       OS_PVC_NAME: rhel8-4-az-a
+  #       VM_NAME: rhel8-test-vm-az-a
+  #       YUM_REPO_URL: http://yum.com/rhel-8/rhel-8-for-x86_64-baseos-rpms # Private yum repository url
+  #       STORAGE_CLASS_NAME: az-a
+
+  #   - name: "rhel8.4 test az-b"
+  #     role: vm-user-stories
+  #     vars:
+  #       OS_PVC_NAME: rhel8-4-az-b
+  #       VM_NAME: rhel8-test-vm-az-b
+  #       YUM_REPO_URL: http://yum.com/rhel-8/rhel-8-for-x86_64-baseos-rpms
+  #       STORAGE_CLASS_NAME: az-b
+    
+  #   - name: "rhel8.4 test az-c"
+  #     role: vm-user-stories
+  #     vars:
+  #       OS_PVC_NAME: rhel8-4-az-c
+  #       VM_NAME: rhel8-test-vm-az-c
+  #       YUM_REPO_URL: http://yum.com/rhel-8/rhel-8-for-x86_64-baseos-rpms
+  #       STORAGE_CLASS_NAME: az-c
+  #       affinity: false
+  # tasks:
+  #   - name: rhel7 templates 
+  #     include_role:
+  #       name: vm-user-stories
+  #       tasks_from: vms_from_templates
+  #     vars:
+  #       TEMPLATE_NAME:
+  #         temp1: rhel7-9-az-a
+  #         temp2: rhel7-9-az-b
+  #         temp3: rhel7-9-az-c
+
+  #   - name: rhel8 templates 
+  #     include_role:
+  #       name: vm-user-stories
+  #       tasks_from: vms_from_templates
+  #     vars:
+  #       TEMPLATE_NAME:
+  #         temp1: rhel8-4-az-a
+  #         temp2: rhel8-4-az-b
+  #         temp3: rhel8-4-az-c
+
+  #   - name: win16 templates 
+  #     include_role:
+  #       name: vm-user-stories
+  #       tasks_from: vms_from_templates
+  #     vars:
+  #       TEMPLATE_NAME:
+  #         temp7: windows-2016-az-a
+  #         temp8: windows-2016-az-b
+  #         #temp9: windows-2016-az-c

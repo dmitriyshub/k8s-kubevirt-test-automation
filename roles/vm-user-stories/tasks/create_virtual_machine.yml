@@ -1,0 +1,63 @@
+---
+
+  - name: Create Virtual Machine
+    block:
+      - name: Check if the VM is already exists
+        k8s_info:
+          kind: VirtualMachine
+          name: "{{ VM_NAME }}"
+          namespace: "{{ PROJECT }}"
+        register: existing_vm_info
+
+      - name: Render the 'virtual_machine.j2' template to generate VM definition
+        ansible.builtin.template: 
+          src: "virtual_machine.j2" 
+          dest: "files/virtual_machine.yml"
+
+      - name: Deploy the generated VM yaml
+        k8s:
+          state: present
+          src: "files/virtual_machine.yml"
+        register: vm_info
+
+      - name: Ensure the Virtual Machine is created
+        k8s_info:
+          kind: VirtualMachine
+          name: "{{ VM_NAME }}"
+          namespace: "{{ PROJECT }}"
+        register: vm_info
+        retries: 24 
+        delay: 10 
+        until: vm_info.resources | length > 0 
+        when: existing_vm_info.resources | length == 0
+
+      - name: Ensure the VM is in 'Ready' Status
+        k8s_info:
+          kind: VirtualMachine
+          name: "{{ VM_NAME }}"
+          namespace: "{{ PROJECT }}"
+        register: vm_info
+        retries: 24 
+        delay: 10 
+        until:
+          - vm_info.resources[0].status.conditions is defined
+          - "'Ready' in vm_info.resources[0].status.conditions | map(attribute='type') | list"
+          - "vm_info.resources[0].status.conditions | json_query('[?type==`Ready`].status') | first == 'True'"
+        when: existing_vm_info.resources | length == 0
+
+    rescue:
+      - name: Set initial values for vm_info variable
+        ansible.builtin.set_fact:
+          vm_info:
+            resources: {}
+        when: vm_info is undefined
+
+      - name: Delete the Virtual Machine 
+        k8s:
+          state: absent
+          definition: "{{ vm_info.resources[0] }}"
+        when: vm_info.resources | length > 0
+
+      - name: Fail the task
+        ansible.builtin.fail:
+          msg: "Failed to create and start the VM!"

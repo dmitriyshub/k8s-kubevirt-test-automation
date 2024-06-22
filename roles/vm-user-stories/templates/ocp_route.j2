@@ -1,0 +1,21 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+{% if condition == 'clone' %}  
+  name: {{ VM_NAME }}-clone-route
+{% else %}
+  name: {{ VM_NAME }}-route
+{% endif %}
+  namespace: {{ PROJECT }}
+  labels:
+    environment: ansible-test-{{ VM_NAME }}
+spec:
+  to:
+    kind: Service
+{% if condition == 'clone' %}  
+    name: {{ VM_NAME }}-clone-svc-lb
+{% else %}
+    name: {{ VM_NAME }}-svc-lb
+{% endif %}
+  port:
+    targetPort: 80

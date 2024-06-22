@@ -1,0 +1,13 @@
+apiVersion: snapshot.kubevirt.io/v1alpha1
+kind: VirtualMachineSnapshot
+metadata:
+  name: rhel7-test-vm-az-a-snapshot
+  namespace: post-upgrade-testing
+  labels:
+    environment: ansible-test-rhel7-test-vm-az-a
+spec:
+  source:
+    apiGroup: kubevirt.io 
+    kind: VirtualMachine 
+    name: rhel7-test-vm-az-a
+    namespace: post-upgrade-testing

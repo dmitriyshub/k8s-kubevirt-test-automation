@@ -1,0 +1,173 @@
+- name: VM User Stories Testing OCP cluster
+  hosts: localhost
+  become: false
+  gather_facts: false
+  module_defaults:
+    group/k8s:
+      host: "{{ API_URL }}"
+      api_key: "{{ AUTH_TOKEN }}"
+      ca_cert: "{{ CA_CERT }}"
+  vars_files:
+    - roles/vm-user-stories/vars/main.yml
+    - roles/vm-user-stories/defaults/main.yml
+
+    
+  tasks:
+
+  - name: Initialize remote_facts
+    ansible.builtin.set_fact:
+      remote_facts: []
+
+  - name: Initialize clone_remote_facts
+    ansible.builtin.set_fact:
+      clone_remote_facts: []
+
+  - name: Initialize bridge_ip_address
+    ansible.builtin.set_fact:
+      bridge_nic_name: []
+
+  - name: Initialize clone_bridge_ip_address
+    ansible.builtin.set_fact:
+      clone_bridge_nic_name: []
+
+  - name: Gather VM Network facts
+    ansible.builtin.setup:
+    become: yes
+    delegate_to: 192.168.21.118
+    vars:
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    register: remote_facts
+
+  - name: Gather Clone VM Network facts
+    ansible.builtin.setup:
+    become: yes
+    delegate_to: 192.168.21.119
+    vars:
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    register: clone_remote_facts
+
+  - name: Find the VM NIC Device name by MAC address
+    set_fact:
+      bridge_nic_name: "{{ remote_facts['ansible_facts'][item]['device'] }}"
+    when: remote_facts['ansible_facts'][item]['macaddress'] == "52:54:00:18:74:92"
+    with_items: 
+      - "{{ remote_facts['ansible_facts'].keys() | select('match', '^ansible_(eth[0-9]+|enp[0-9]s0)') | list }}"
+
+
+  - name: Find the Clone VM IP address by MAC address
+    set_fact:
+      clone_bridge_nic_name: "{{ clone_remote_facts['ansible_facts'][item]['device'] }}"
+    when: clone_remote_facts['ansible_facts'][item]['macaddress'] == "52:54:00:60:12:20"
+    with_items: 
+      - "{{ remote_facts['ansible_facts'].keys() | select('match', '^ansible_(eth[0-9]+|enp[0-9]s0)') | list }}"
+
+  - name: Add an Ethernet connection with static IP configuration
+    nmcli:
+      conn_name: my-eth1
+      ifname: "{{ bridge_nic_name }}"
+      type: ethernet
+      ip4: "{{ VM_BRIDGE_IP }}/24"
+      gw4: "{{ BRIDGE_GATEWAY }}"
+      state: present
+    become: true  
+    delegate_to: 192.168.21.118
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  - name: Add an Ethernet connection with static IP configuration
+    nmcli:
+      conn_name: my-eth1
+      ifname: "{{ clone_bridge_nic_name }}"
+      type: ethernet
+      ip4: "{{ CLONE_BRIDGE_IP }}/24"
+      gw4: "{{ BRIDGE_GATEWAY }}"
+      state: present
+    become: true  
+    delegate_to: 192.168.21.119
+    vars: 
+      ansible_user: "{{ VM_USER }}"
+      ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+    # - name: Generate random MAC address
+    #   set_fact:
+    #     random_mac: "525400{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}"
+    #   run_once: true
+
+    # - name: Format the MAC address
+    #   set_fact:
+    #     VM_BRIDGE_MAC: "{{ [random_mac[0:2], random_mac[2:4], random_mac[4:6], random_mac[6:8], random_mac[8:10], random_mac[10:12]] | join(':') }}"
+
+    # - name: Generate random MAC address
+    #   set_fact:
+    #     random_mac: "525400{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}{{ 255 | random | regex_replace('^(.)$', '0\\1') | upper }}"
+    #   run_once: true
+
+    # - name: Format the MAC address
+    #   set_fact:
+    #     CLONE_BRIDGE_MAC: "{{ [random_mac[0:2], random_mac[2:4], random_mac[4:6], random_mac[6:8], random_mac[8:10], random_mac[10:12]] | join(':') }}"
+ 
+    # - name: Display the formatted MAC address
+    #   debug:
+    #     var: VM_BRIDGE_MAC
+
+    # - name: Display the formatted MAC address
+    #   debug:
+    #     var: CLONE_BRIDGE_MAC
+
+    # - name: Gather all vm info
+    #   k8s_info:
+    #     namespace: "{{ PROJECT }}"
+    #     kind: VirtualMachine
+    #     label_selectors:
+    #       - "environment=ansible-test-{{ VM_NAME }}"
+    #   register: vm_objects
+
+    # - debug:
+    #     var: vm_objects
+
+    # - set_fact:
+    #     bridge_ip_address: "{{ vm_objects.resources[0].spec.template.spec.domain.devices.interfaces[1].macAddress }}"
+    #   when: vm_objects.resources[0].spec.template.spec.domain.devices.interfaces[1].bridge is defined
+
+    # - set_fact:
+    #     clone_bridge_ip_address: "{{ vm_objects.resources[1].spec.template.spec.domain.devices.interfaces[1].macAddress }}"
+    #   when: vm_objects.resources[1].spec.template.spec.domain.devices.interfaces[1].bridge is defined
+
+    # - debug:
+    #     var: bridge_ip_address
+
+    # - debug:
+    #     var: clone_bridge_ip_address
+
+    # - name: Gather VM Network facts
+    #   ansible.builtin.setup:
+    #   become: yes
+    #   delegate_to: 192.168.21.116
+    #   vars:
+    #     ansible_user: "{{ VM_USER }}"
+    #     ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+    #     ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    #   register: remote_facts
+
+    # - debug:
+    #     var: remote_facts
+
+    # - name: "Bring up NIC device eth1"
+    #   nmcli:
+    #     conn_name: eth1
+    #     ifname: eth1
+    #     state: present
+    #     type: ethernet
+    #   become: true
+    #   delegate_to: 192.168.21.116
+    #   vars: 
+    #     ansible_user: "{{ VM_USER }}"
+    #     ansible_private_key_file: "{{ SSH_PRIVATE_KEY }}"
+    #     ansible_ssh_common_args: '-o StrictHostKeyChecking=no'

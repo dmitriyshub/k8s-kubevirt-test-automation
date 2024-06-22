@@ -1,0 +1,46 @@
+---
+
+  - name: Check if the PVCs already exist
+    k8s_info:
+      kind: PersistentVolumeClaim
+      namespace: "{{ PROJECT }}"
+      name: "{{ item }}"
+    register: pvc_info
+    with_items:
+      - "{{ VM_NAME ~ '-pvc1' }}"
+      - "{{ VM_NAME ~ '-pvc2' }}"
+
+  - name: Determine if PVCs need to be created
+    set_fact:
+      create_pvcs: >-
+        (pvc_info.results[0].resources | length == 0 or
+        pvc_info.results[0].resources[0].spec.resources.requests.storage | regex_replace('Gi', '') | float <= 1) or
+        (pvc_info.results[1].resources | length == 0 or
+        pvc_info.results[1].resources[0].spec.resources.requests.storage | regex_replace('Gi', '') | float <= 1)
+  - name: Create PVCs
+    block:
+      - name: Render the 'new_pvcs.j2' template to generate PVCs definition
+        ansible.builtin.template: 
+          src: "new_pvcs.j2" 
+          dest: "files/new_pvcs.yml"
+        when: create_pvcs
+
+      - name: Deploy the generated PVCs yaml
+        k8s:
+          state: present
+          src: "files/new_pvcs.yml"
+        register: pvc_info
+        when: create_pvcs
+
+      - name: Ensure the PVCs is in 'Bound' Status
+        k8s_info:
+          kind: PersistentVolumeClaim
+          namespace: "{{ PROJECT }}"
+          name: "{{ item }}"
+        register: pvc_info
+        until: pvc_info.resources[0].status.phase == "Bound"
+        retries: 12
+        delay: 10
+        loop:
+          - "{{ VM_NAME ~ '-pvc1' }}"
+          - "{{ VM_NAME ~ '-pvc2' }}"

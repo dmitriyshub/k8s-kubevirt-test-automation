@@ -1,0 +1,10 @@
+
+# SSH Keys path
+HOME_DIR: "{{ lookup('env','HOME') }}"
+SSH_PUBLIC_KEY: "{{ HOME_DIR }}/.ssh/vm-key.pub"
+SSH_PRIVATE_KEY: "{{ HOME_DIR }}/.ssh/vm-key"
+
+# Authentication vars
+API_URL: https://api.cluster-0.com:6443
+AUTH_TOKEN: "{{ lookup('file','secret/token') }}"
+CA_CERT: "secret/ca.crt"

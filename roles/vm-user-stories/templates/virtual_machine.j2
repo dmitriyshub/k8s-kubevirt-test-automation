@@ -1,0 +1,270 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  annotations:
+    vm.kubevirt.io/os: rhel7
+  namespace: {{ PROJECT}}
+  labels:
+    environment: ansible-test-{{ VM_NAME }}
+{% if condition == 'clone' %}  
+    vm: {{ VM_NAME }}-clone
+  name: {{ VM_NAME }}-clone
+{% else %}
+    vm: {{ VM_NAME }}
+  name: {{ VM_NAME }}
+{% endif %}
+spec:
+  dataVolumeTemplates:
+{% if condition == 'clone' %}  
+    - apiVersion: cdi.kubevirt.io/v1beta1
+      kind: DataVolume
+      metadata:
+        name: {{ VM_NAME }}-clone
+      spec:
+        source:
+          pvc:
+            name: {{ VM_NAME }}
+            namespace: {{ PROJECT }}
+        storage:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 800Gi
+          storageClassName: {{ STORAGE_CLASS_NAME }}
+          volumeMode: Block
+
+    - apiVersion: cdi.kubevirt.io/v1beta1
+      kind: DataVolume
+      metadata:
+        name: {{ VM_NAME }}-pvc1-clone
+      spec:
+        source:
+          pvc:
+            name: {{ VM_NAME }}-pvc1
+            namespace: {{ PROJECT }}
+        storage:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 2Gi
+          storageClassName: {{ STORAGE_CLASS_NAME }}
+          volumeMode: Block
+
+    - apiVersion: cdi.kubevirt.io/v1beta1
+      kind: DataVolume
+      metadata:
+        name: {{ VM_NAME }}-pvc2-clone
+      spec:
+        source:
+          pvc:
+            name: {{ VM_NAME }}-pvc2
+            namespace: {{ PROJECT }}
+        storage:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 2Gi
+          storageClassName: {{ STORAGE_CLASS_NAME }}
+          volumeMode: Block
+{% else %}
+    - apiVersion: cdi.kubevirt.io/v1beta1
+      kind: DataVolume
+      metadata:
+        name: {{ VM_NAME }}
+      spec:
+        source:
+          pvc:
+            name: {{ OS_PVC_NAME }}
+            namespace: {{ OS_PVC_PROJECT_NAME }}
+        storage:
+          accessModes:
+            - ReadWriteMany
+          resources:
+            requests:
+              storage: 800Gi
+          storageClassName: {{ STORAGE_CLASS_NAME }}
+          volumeMode: Block  
+{% endif %}
+  running: true
+  template:
+    metadata:
+      annotations:
+        vm.kubevirt.io/flavor: tiny
+        vm.kubevirt.io/os: rhel7
+        vm.kubevirt.io/workload: server
+      labels:
+        environment: ansible-test-{{ VM_NAME }}
+{% if condition == 'clone' %}  
+        kubevirt.io/domain: {{ VM_NAME }}-clone
+        kubevirt.io/size: small
+{% else %}
+        kubevirt.io/domain: {{ VM_NAME }}
+        kubevirt.io/size: small
+{% endif %}
+    spec:
+{% if affinity == true %}  
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: environment
+                operator: In
+                values:
+                - ansible-test-{{ VM_NAME }}
+            topologyKey: "kubernetes.io/hostname"
+{% endif %}
+      accessCredentials:
+        - sshPublicKey:
+            propagationMethod:
+              configDrive: {}
+            source:
+              secret:
+                secretName: {{ VM_NAME }}-ssh-key
+      domain:
+        cpu:
+          cores: 1
+          sockets: 1
+          threads: 1
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: cloudinitdisk
+{% if condition == 'new pvcs' %}
+            - bootOrder: 1
+              disk:
+                bus: virtio
+              name:  {{ VM_NAME }}
+            - disk:  
+              name: httpd-config-disk
+              serial: {{ CONFIG_SERIAL }}  
+            - disk:
+                bus: scsi
+              name:  pvc1
+              serial: {{ PVC1_SERIAL }}
+            - disk:
+                bus: scsi
+              name:  pvc2
+              serial: {{ PVC2_SERIAL }}
+{% elif condition == 'clone' %}
+            - bootOrder: 1
+              disk:
+                bus: virtio
+              name:  {{ VM_NAME }}
+            - disk:  
+              name: httpd-config-disk
+              serial: {{ CONFIG_SERIAL }}  
+            - disk:
+                bus: scsi
+              name:  pvc1
+              serial: {{ PVC1_SERIAL }}
+            - disk:
+                bus: scsi
+              name:  pvc2
+              serial: {{ PVC2_SERIAL }}
+{% else %}
+            - bootOrder: 1
+              disk:
+                bus: virtio
+              name:  {{ VM_NAME }}
+            - disk:  
+              name: httpd-config-disk
+              serial: {{ CONFIG_SERIAL }}
+{% endif %}
+          interfaces:
+            - masquerade: {}
+              model: virtio
+              name: nic-0
+            - bridge: {}
+{% if condition == 'clone' %}
+              macAddress: '{{ CLONE_BRIDGE_MAC }}'
+{% else %}
+              macAddress: '{{ VM_BRIDGE_MAC }}'
+{% endif %}
+              model: virtio
+              name: nic-1
+          networkInterfaceMultiqueue: true
+          rng: {}
+        resources:
+          limits:
+            cpu: '1'
+          requests:
+            cpu: 250m
+            memory: 2Gi
+      networks:
+        - name: nic-0
+          pod: {}
+        - multus:
+            networkName: {{ PROJECT }}-{{ BRIDGE_NAME }}
+          name: nic-1
+      terminationGracePeriodSeconds: 180
+      volumes:
+        - cloudInitConfigDrive:
+            userData: |-
+              #cloud-config
+              user: {{ VM_USER }}
+              password: {{ VM_PASSWORD }}
+              chpasswd: { expire: False }
+              bootcmd:
+                # mount the ConfigMap
+                - "sudo mkdir -p {{ CM_MOUNT_PATH }} "
+                - "sudo mount /dev/$(lsblk --nodeps -no name,serial | grep {{ CONFIG_SERIAL }} | cut -f1 -d' ') {{ CM_MOUNT_PATH }}"
+{% if condition == 'clone' and vlan == 'dhcp' %}
+                - "sudo nmcli device connect $(ip -br link | grep '{{ CLONE_BRIDGE_MAC }}' | cut -f 1 -d ' ')"
+{% elif vlan == 'dhcp' %}
+                - "sudo nmcli device connect $(ip -br link | grep '{{ VM_BRIDGE_MAC }}' | cut -f 1 -d ' ')"
+{% endif %}
+
+          name: cloudinitdisk
+{% if condition == 'new pvcs' %}
+        - dataVolume:
+            name:  {{ VM_NAME }}
+          name:  {{ VM_NAME }}
+        - configMap:
+            name: {{ VM_NAME }}-config
+          name: httpd-config-disk
+        - name: pvc1
+          persistentVolumeClaim:
+            claimName: {{ VM_NAME }}-pvc1
+            hotpluggable: true
+        - name: pvc2
+          persistentVolumeClaim:
+            claimName: {{ VM_NAME }}-pvc2
+            hotpluggable: true
+{% elif condition == 'clone' %}
+        - dataVolume:
+            name:  {{ VM_NAME }}-clone
+          name:  {{ VM_NAME }}
+        - configMap:
+            name: {{ VM_NAME }}-config
+          name: httpd-config-disk
+        - name: pvc1
+          persistentVolumeClaim:
+            claimName: {{ VM_NAME }}-pvc1-clone
+            hotpluggable: true
+        - name: pvc2
+          persistentVolumeClaim:
+            claimName: {{ VM_NAME }}-pvc2-clone
+            hotpluggable: true
+{% else %}
+        - dataVolume:
+            name:  {{ VM_NAME }}
+          name:  {{ VM_NAME }}
+        - configMap:
+            name: {{ VM_NAME }}-config
+          name: httpd-config-disk
+{% endif %}
+
+
+
+

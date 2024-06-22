@@ -1,0 +1,9 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstanceMigration
+metadata:
+  name: {{ VM_NAME }}-migration-job
+  namespace: {{ PROJECT }}
+  labels:
+    environment: ansible-test-{{ VM_NAME }}
+spec:
+  vmiName: {{ VM_NAME }}
