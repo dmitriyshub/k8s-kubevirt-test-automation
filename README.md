@@ -74,7 +74,7 @@ Setting up this environment will provide the necessary resources and configurati
 | `Openshift Virtualization` | Kubevirt Operator             | `4.10.1` & `4.11.4`           |    No    |
 | `MetalLB`                  | MetalLB Operator              | `4.10.0` & `4.12.0`           |    No    |
 | `OpenShift Data Foundation`| ODF Operator                  | `4.10.13` & `4.12.4`          |    Yes   |
-|                            |                               |                               |          |
+
 
 ---
 ### Project Tree Structure
@@ -367,11 +367,11 @@ Here is a list of primary variables used in this role:
 | `pod_limits`            | `pod_info.resources[0].spec.containers[0].resources.limits.cpu`| virt-launcher pod cpu limits  | runtime       |
 
 ---
-### Playbook Outputs
+### Full Playbook Outputs
 ---
 
-```shell
-PLAY RECAP ****************************************************************************************************************************************
+```bash
+PLAY RECAP *******************************************************************************************************
 # Last Play from the bastion with templates
 localhost                  : ok=1056 changed=323  unreachable=0    failed=0    skipped=90   rescued=0    ignored=0   
 # Full Last Play from local machine
