@@ -1,6 +1,22 @@
 ## Ansible Automation for Kubevirt on Kubernetes Full Functionality Tests with External Access by MetalLB
 #### This Ansible Role Tests the VM functionality for an Openshift\Kubernetes Cluster post-upgrade. It initializes several objects in the cluster, aiming to create a fully functional virtual machines servers and tests the functionality 
 
+To run the Ansible role without modifications, ensure that your infrastructure includes:
+
+1. OpenShift/Kubernetes Cluster 
+  - You need a functioning OpenShift or Kubernetes cluster with 2 Workers (min)
+
+2. CNV/KubeVirt Operator for Managing Virtual Machines
+  - OpenShift CNV (OpenShift Virtualization) or KubeVirt must be installed, allows you to run and manage VMs alongside container workloads within your cluster
+3. MetalLB with a Configured Available IP Address Pool
+  - MetalLB is a load-balancer implementation for bare-metal Kubernetes clusters. It allows you to assign external IP addresses to services within the cluster
+4. VLAN network bridge
+  - You need to set up a VLAN network bridge.
+5. OpenShift VM templates and Storage Classes with 3 Availability Zones
+  - 3 Different VM tempaltes for each OS Version (rhel7-9-az-a etc.)
+  - 3 Different Storage Classes for each Availability Zones (storageClassName az-a etc.)
+
+Setting up this environment will provide the necessary resources and configurations required by the Ansible role to function correctly otherwise please change the role functinality 
 ---
 ### Role Test Flow Actions
 ---
