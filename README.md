@@ -74,8 +74,8 @@ Setting up this environment will provide the necessary resources and configurati
 | `Openshift Virtualization` | Kubevirt Operator             | `4.10.1` & `4.11.4`           |    No    |
 | `MetalLB`                  | MetalLB Operator              | `4.10.0` & `4.12.0`           |    No    |
 | `OpenShift Data Foundation`| ODF Operator                  | `4.10.13` & `4.12.4`          |    Yes   |
-|----------------------------|-------------------------------|-------------------------------|----------|
 |                            |                               |                               |          |
+
 ---
 ### Project Tree Structure
 ---
