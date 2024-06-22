@@ -81,7 +81,7 @@ Setting up this environment will provide the necessary resources and configurati
 ---
 
 - Refer to the following tree structure
-```shell
+```bash
 $PROJECT/
 |-- files/ # Directory for the j2 templates output YAML files
     |-- *.yml
@@ -118,7 +118,7 @@ $PROJECT/
 Use the project tree structure for reference
 
 1. Clone this role to the `roles` directory in your project.
-```shell
+```bash
 git clone git@github.com:dmitriyshub/k8s-kubevirt-test-auto.git $HOME/$PROJECT
 ```
 2. Create `inventory.ini` and `ansible.cfg` files at the project level
@@ -134,11 +134,11 @@ deprecation_warnings=False
 ```
 
 3. Prepare the `files` and `secret` directories in your project
-```shell
+```bash
 mkdir $PROJECT/{files,secret}
 ```
 4. Make sure that you have  a `token` and `ca.crt` bundle available at the specified paths
-```shell
+```bash
 # default token path
 $PROJECT/secret/token
 # default ca.crt path
@@ -165,7 +165,6 @@ $PROJECT/secret/ca.crt
 6. Create the `main.yml` playbook for the tests
 ```yaml
 ---
-
 - name: VM User Stories Testing OCP cluster
   hosts: localhost
   become: false
@@ -268,7 +267,7 @@ ansible-playbook main.yml
 ```
 
 8. Use the generated SSH key pair for debugging
-```shell
+```bash
 # default ssh path
 $HOME/.ssh/vm-key
 $HOME/.ssh/vm-key.pub
