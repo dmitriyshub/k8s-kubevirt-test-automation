@@ -2,7 +2,7 @@
 
 ---
 
-#### This Ansible Role Tests the VM functionality for an Openshift\Kubernetes Cluster post-upgrade. It initializes several objects in the cluster, aiming to create a fully functional virtual machines servers and tests the functionality 
+#### This Ansible Role Tests the VM functionality for an Openshift\Kubernetes Cluster post-upgrade. It initializes several objects in the cluster, aiming to create a fully functional virtual machines servers and tests the functionality including SSH,HTTPD,FIREWALLD,Storage,LiveMigration, Network and more
 
 To run the Ansible role without modifications, ensure that your infrastructure includes:
 
